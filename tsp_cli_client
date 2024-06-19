@@ -196,8 +196,8 @@ if __name__ == "__main__":
                         help="Get the XY data of an output", metavar="OUTPUT_ID")
     parser.add_argument("--items", dest="items",
                         help="The list of XY items requested", nargs="*")
-    parser.add_argument("--times", dest="times",
-                        help="The list of XY times requested", nargs="*")
+    parser.add_argument("--time-range", dest="time_range",
+                        help="The time range requested", nargs=3, metavar=("START", "END", "NUM_TIMES"))
     parser.add_argument("--uuid", dest="uuid", help="The UUID of a trace")
     parser.add_argument("--uuids", dest="uuids",
                         help="The list of UUIDs", nargs="*")
@@ -219,9 +219,16 @@ if __name__ == "__main__":
                         action='store_true', help="Update an configuration using paramemeters provided by --params")
     parser.add_argument("--delete-configuration", dest="delete_configuration",
                         help="Delete a configuration", metavar="CONFIGURATION_ID")
+    parser.add_argument("--apply-configuration", dest="apply_configuration",
+                        help="Load an configuration with path to file", metavar="UUID")
+    parser.add_argument("--remove-configuration", dest="remove_configuration",
+                        help="Remove a configuration", metavar="UUID")
     parser.add_argument("--type-id", dest="type_id", help="id of configuration source type")
     parser.add_argument("--config-id", dest="config_id", help="id of configuration")
     parser.add_argument("--params", dest="params", help="comma separated key value pairs (key1=val1,key2=val2)")
+    parser.add_argument("--is-trace", dest="is-trace",
+                        action='store_true', help="specify if UUID is for trace if ommitted the by defaut it's for an experiment.")
+
 
     argcomplete.autocomplete(parser)
     options = parser.parse_args()
@@ -370,20 +377,35 @@ if __name__ == "__main__":
             __get_tree(options.uuid, options.get_xy_tree, "TREE_TIME_XY")
 
         if options.get_xy:
-            if not options.items or not options.times:
-                print("Provide requested --items and --times for the XY data")
+            if not options.items:
+                print("Provide requested --items for the XY data")
+                sys.exit(1)
+
+            if not options.time_range:
+                print("Provide requested --time-range for the XY data")
                 sys.exit(1)
 
             if options.uuid is not None:
-                parameters = {TspClient.REQUESTED_TIME_KEY: list(map(int, options.times)),
-                              TspClient.REQUESTED_ITEM_KEY: list(map(int, options.items))}
+                start_time = int(options.time_range[0])
+                end_time = int(options.time_range[1])
+                nb_times = int(options.time_range[2])
+
+                parameters = {
+                    TspClient.REQUESTED_ITEM_KEY: list(map(int, options.items)),
+                    TspClient.REQUESTED_TIME_RANGE_KEY: {
+                        TspClient.REQUESTED_TIME_RANGE_START_KEY: start_time,
+                        TspClient.REQUESTED_TIME_RANGE_END_KEY: end_time,
+                        TspClient.REQUESTED_TIME_RANGE_NUM_TIMES_KEY: nb_times
+                    }
+                }
+                
                 params = {TspClient.PARAMETERS_KEY: parameters}
 
                 response = tsp_client.fetch_xy(
                     options.uuid, options.get_xy, params)
                 if response.status_code == 200:
                     xyModel = response.model.model
-                    xyModel.print()
+                    xyModel.print(array_print=True)
                     sys.exit(0)
                 else:
                     sys.exit(1)
@@ -495,6 +517,35 @@ if __name__ == "__main__":
             else:
                 print("No source typeId provided to delete this configuration")
 
+        if options.apply_configuration:
+            if options.type_id is not None:
+                if options.config_id is not None:
+                    response = tsp_client.apply_configuration(options.apply_configuration, options.type_id, options.config_id, False)
+                    if response.status_code == 200:
+                        sys.exit(0)
+                    else:
+                        print("apply configuration failed")
+                        sys.exit(1)
+                else:
+                    print("No config id to configuration file provided")
+                    sys.exit(1)
+            else:
+                print("No typeId provided")
+
+        if options.remove_configuration:
+            if options.type_id is not None:
+                if options.config_id is not None:
+                    response = tsp_client.remove_configuration(options.remove_configuration, options.type_id, options.config_id)
+                    if response.status_code == 200:
+                        sys.exit(0)
+                    else:
+                        print("Remove configuration failed")
+                        sys.exit(1)
+                else:
+                    print("No config id to configuration file provided")
+                    sys.exit(1)
+            else:
+                print("No source typeId provided to delete this configuration")
 
     except requests.exceptions.ConnectionError as e:
         print('Unexpected error: {0}'.format(e))

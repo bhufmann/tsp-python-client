@@ -57,6 +57,11 @@ class TspClient:
     PARAMETERS_KEY = 'parameters'
     REQUESTED_TIME_KEY = 'requested_times'
     REQUESTED_ITEM_KEY = 'requested_items'
+    
+    REQUESTED_TIME_RANGE_KEY = 'requested_timerange'
+    REQUESTED_TIME_RANGE_START_KEY = 'start'
+    REQUESTED_TIME_RANGE_END_KEY = 'end'
+    REQUESTED_TIME_RANGE_NUM_TIMES_KEY = 'nbTimes'
 
     def __init__(self, base_url):
         '''
@@ -457,6 +462,43 @@ class TspClient:
         if response.status_code == 200:
             return TspClientResponse(Configuration(json.loads(response.content.decode('utf-8'))),
                                      response.status_code, response.text)
+        else:  # pragma: no cover
+            print("post extension failed: {0}".format(response.status_code))
+            return TspClientResponse(None, response.status_code, response.text)
+
+    def apply_configuration(self, exp_uuid, type_id, config_id, is_trace):
+        '''
+        Load an extension
+        '''
+        api_url = '{0}experiments/{1}/config/types/{2}/configs'.format(
+            self.base_url, exp_uuid, type_id)
+
+        if is_trace:
+            api_url = '{0}traces/{1}/config/types/{2}/configs'.format(
+            self.base_url, exp_uuid, type_id)
+
+        my_parameters = {'configId': config_id }
+        parameters = {'parameters': my_parameters}
+
+        response = requests.post(api_url, json=parameters, headers=headers)
+
+        if response.status_code == 200:
+            return TspClientResponse("Loaded", response.status_code, response.text)
+        else:  # pragma: no cover
+            print("post extension failed: {0}".format(response.status_code))
+            return TspClientResponse(None, response.status_code, response.text)
+
+    def remove_configuration(self, exp_uuid, type_id, config_id):
+        '''
+        Load an extension
+        '''
+        api_url = '{0}experiments/{1}/config/types/{2}/configs/{3}'.format(
+            self.base_url, exp_uuid, type_id, config_id)
+
+        response = requests.delete(api_url, headers=headers_form)
+
+        if response.status_code == 200:
+            return TspClientResponse("Loaded", response.status_code, response.text)
         else:  # pragma: no cover
             print("post extension failed: {0}".format(response.status_code))
             return TspClientResponse(None, response.status_code, response.text)
