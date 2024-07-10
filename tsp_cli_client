@@ -219,9 +219,15 @@ if __name__ == "__main__":
                         action='store_true', help="Update an configuration using paramemeters provided by --params")
     parser.add_argument("--delete-configuration", dest="delete_configuration",
                         help="Delete a configuration", metavar="CONFIGURATION_ID")
+    parser.add_argument("--apply-configuration", dest="apply_configuration",
+                        help="Load an configuration with path to file", metavar="UUID")
+    parser.add_argument("--remove-configuration", dest="remove_configuration",
+                        help="Remove a configuration", metavar="UUID")
     parser.add_argument("--type-id", dest="type_id", help="id of configuration source type")
     parser.add_argument("--config-id", dest="config_id", help="id of configuration")
     parser.add_argument("--params", dest="params", help="semicolon separated key value pairs (key1=val1;key2=val2)")
+    parser.add_argument("--is-trace", dest="is-trace",
+                        action='store_true', help="specify if UUID is for trace if ommitted the by defaut it's for an experiment.")
 
     argcomplete.autocomplete(parser)
     options = parser.parse_args()
@@ -510,6 +516,35 @@ if __name__ == "__main__":
             else:
                 print("No source typeId provided to delete this configuration")
 
+        if options.apply_configuration:
+            if options.type_id is not None:
+                if options.config_id is not None:
+                    response = tsp_client.apply_configuration(options.apply_configuration, options.type_id, options.config_id, False)
+                    if response.status_code == 200:
+                        sys.exit(0)
+                    else:
+                        print("apply configuration failed")
+                        sys.exit(1)
+                else:
+                    print("No config id to configuration file provided")
+                    sys.exit(1)
+            else:
+                print("No typeId provided")
+
+        if options.remove_configuration:
+            if options.type_id is not None:
+                if options.config_id is not None:
+                    response = tsp_client.remove_configuration(options.remove_configuration, options.type_id, options.config_id)
+                    if response.status_code == 200:
+                        sys.exit(0)
+                    else:
+                        print("Remove configuration failed")
+                        sys.exit(1)
+                else:
+                    print("No config id to configuration file provided")
+                    sys.exit(1)
+            else:
+                print("No source typeId provided to delete this configuration")
 
     except requests.exceptions.ConnectionError as e:
         print('Unexpected error: {0}'.format(e))
