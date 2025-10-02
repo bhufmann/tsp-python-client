@@ -86,10 +86,18 @@ def __get_tree(uuid, outputid, treetype):
             if tree is None:
                 print("Tree had no model; retry?")
                 sys.exit(1)
+ 
+            print('Successfully fetched tree')
+            print('-------------------------')
 
-            tree_model = TreeModel(tree.entries, tree.headers)
-            tree_model.print()
+            if (options.pretty):
+                tree_model = TreeModel(tree.entries, tree.headers)
+                tree_model.print()
+                sys.exit(0)
+
+            print(tree.to_json())
             sys.exit(0)
+
         else:
             sys.exit(1)
     else:
@@ -221,6 +229,8 @@ if __name__ == "__main__":
     parser.add_argument("--delete-output", dest="delete_output", help="Delete derived output", metavar="DERIVED_OUTPUT_ID")
     parser.add_argument("--output-id", dest="output_id", help="The output ID")
     parser.add_argument("--json-file", dest="json_file", help="JSON file with parameter")
+    parser.add_argument("--pretty", action='store_true', dest="pretty", help="Pretty print result (if supported) else plain JSON")
+
 
     argcomplete.autocomplete(parser)
     options = parser.parse_args()
@@ -432,8 +442,15 @@ if __name__ == "__main__":
                     options.uuid, options.get_virtual_table_columns)
 
                 if response.status_code == 200:
+                    print('Successfully fetched virtual table columns')
+                    print('------------------------------------------')
+
                     model = response.model.model
-                    model.print()
+                    if (options.pretty):
+                        model.print()
+                        sys.exit(0)
+
+                    print(model.to_json())
                     sys.exit(0)
                 else:
                     sys.exit(1)
@@ -482,8 +499,13 @@ if __name__ == "__main__":
                     if response.status_code == 200:
                         headers = columns_response.model.model.columns
 
-                    table_model = TableModel(response.model.model, headers)
-                    table_model.print()
+                    if (options.pretty):
+                        table_model = TableModel(response.model.model, headers)
+                        table_model.print()
+                        sys.exit(0)
+                    
+                    print(response.model.model.to_json())
+                    sys.exit(0)
 
 #                    python_object = json.loads(response.status_text)
 #                    print(json.dumps(python_object, indent=4))
